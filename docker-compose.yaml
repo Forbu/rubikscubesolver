@@ -1,0 +1,11 @@
+# Here we setup the docker compose for the transformer world model
+version: '3'
+services:
+  transformer_world_model:
+    image: adrien/transformer_world_model
+    network_mode: host
+    volumes:
+      - .:/home/
+    working_dir: /home
+    command: tail -F /home/LICENSE # something to keep the container running
+

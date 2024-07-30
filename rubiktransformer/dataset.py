@@ -2,8 +2,8 @@
 Module that will define the dataset for the transformer world model
 It will be generated on the fly with the help of the jumanji library
 """
-import flashbax
 
+import flashbax
 
 def gathering_data(env, nb_games, len_seq, buffer):
     """

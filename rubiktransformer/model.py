@@ -6,6 +6,8 @@ Essentially, it will be the backbone of the transformer world model
 
 We will try to code the transformer in jax (flax)
 
+Homemade version of the transformer
+
 """
 
 from flax import nnx
@@ -59,8 +61,11 @@ class TransformerBlock(nnx.Module):
         activation="relu",
         layer_norm_eps: float = 1e-5,
         rngs=None,
+        causal=False,
     ):
         super().__init__()
+
+        self.causal = causal
 
         # init layernorm
         self.layernorm1 = nnx.LayerNorm(num_features=d_model, rngs=rngs)
@@ -87,10 +92,15 @@ class TransformerBlock(nnx.Module):
         self.activation = activation
         self.layer_norm_eps = layer_norm_eps
 
-
     def __call__(self, x):
         x_forward = self.layernorm1(x)
-        x_forward = self.multihead(x_forward)
+
+        if self.causal:
+            mask = nnx.make_causal_mask(x_forward[:, :, 0])
+            x_forward = self.multihead(x_forward, mask=mask)
+        else:
+            x_forward = self.multihead(x_forward)
+
         x_forward = self.dropout(x_forward)
         x_forward = x + x_forward
         x_forward_second = self.layernorm2(x_forward)
@@ -119,6 +129,7 @@ class Transformer(nnx.Module):
         nb_embedding: int = 64,
         out_features: int = 64,
         rngs=None,
+        causal=False,
     ):
         super().__init__()
         self.d_model = d_model
@@ -127,6 +138,7 @@ class Transformer(nnx.Module):
         self.dim_feedforward = dim_feedforward
         self.dropout = dropout
         self.activation = activation
+        self.causal = causal
 
         self.nb_embedding = nb_embedding
 
@@ -146,6 +158,7 @@ class Transformer(nnx.Module):
                     activation=activation,
                     layer_norm_eps=layer_norm_eps,
                     rngs=rngs,
+                    causal=causal,
                 )
                 for _ in range(num_decoder_layers)
             ],
@@ -153,14 +166,16 @@ class Transformer(nnx.Module):
 
         # now the last layer norm and linear layer
         self.layernorm = nnx.LayerNorm(num_features=d_model, rngs=rngs)
-        self.linear = nnx.Linear(in_features=d_model, out_features=out_features, rngs=rngs)
+        self.linear = nnx.Linear(
+            in_features=d_model, out_features=out_features, rngs=rngs
+        )
 
     def __call__(self, x):
         x = self.embedding(x)
 
         for i in range(self.num_decoder_layers):
             x = self.transformer[i](x)
-            
+
         x = self.layernorm(x)
         x = self.linear(x)
 

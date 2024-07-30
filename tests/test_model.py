@@ -53,6 +53,7 @@ def test_transformer():
     tb = model.Transformer(
         d_model=d_model,
         nhead=nhead,
+        num_decoder_layers=2,
         rngs=key,
         nb_embedding=nb_embedding,
         out_features=out_features,

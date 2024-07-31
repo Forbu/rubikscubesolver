@@ -3,3 +3,4 @@ jaxlib
 flax[all]
 jumanji
 flashbax
+optax

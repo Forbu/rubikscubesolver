@@ -9,14 +9,32 @@ TODO in the trainer
 
 """
 
-def init_models():
+
+def init_models_optimizers():
+    # init model for the transformer world model
+    # init model for policy model
+    # init optimizers
+
     pass
 
-def learning_step():
+
+def init_learning():
+    # gather data from the environment
+    # init models and optimizers
     pass
+
 
 def train():
     pass
 
 
+def learning_loop():
+    pass
 
+
+def learning_step():
+    pass
+
+
+class Trainer:
+    pass

@@ -58,7 +58,6 @@ class TransformerBlock(nnx.Module):
         nhead: int = 8,
         dim_feedforward: int = 2048,
         dropout: float = 0.1,
-        activation="relu",
         layer_norm_eps: float = 1e-5,
         rngs=None,
         causal=False,
@@ -89,7 +88,6 @@ class TransformerBlock(nnx.Module):
 
         self.dropout = nnx.Dropout(dropout, rngs=rngs)
 
-        self.activation = activation
         self.layer_norm_eps = layer_norm_eps
 
     def __call__(self, x):
@@ -123,7 +121,6 @@ class Transformer(nnx.Module):
         num_decoder_layers: int = 6,
         dim_feedforward: int = 2048,
         dropout: float = 0.1,
-        activation="relu",
         # decoder only
         layer_norm_eps: float = 1e-5,
         nb_embedding: int = 64,
@@ -137,7 +134,6 @@ class Transformer(nnx.Module):
         self.num_decoder_layers = num_decoder_layers
         self.dim_feedforward = dim_feedforward
         self.dropout = dropout
-        self.activation = activation
         self.causal = causal
 
         self.nb_embedding = nb_embedding
@@ -155,7 +151,6 @@ class Transformer(nnx.Module):
                     nhead=nhead,
                     dim_feedforward=dim_feedforward,
                     dropout=dropout,
-                    activation=activation,
                     layer_norm_eps=layer_norm_eps,
                     rngs=rngs,
                     causal=causal,

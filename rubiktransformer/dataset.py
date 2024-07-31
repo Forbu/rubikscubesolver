@@ -52,6 +52,7 @@ def gathering_data(env, nb_games, len_seq, buffer, buffer_list, key):
         state = jnp.stack(state_save_element, axis=0)
         action = jnp.stack(action_save_element, axis=0)
 
+
         # transform action to int32 type
         action = action.astype(jnp.int32)
 

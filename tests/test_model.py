@@ -7,7 +7,7 @@ import jax
 import jax.numpy as jnp
 import flax.nnx as nnx
 
-import rubiktransformer.model as model
+import rubiktransformer.model_transformer as model
 
 
 def test_feedforward():

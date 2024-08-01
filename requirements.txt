@@ -4,3 +4,4 @@ flax[all]
 jumanji
 flashbax
 optax
+wandb

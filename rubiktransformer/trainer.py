@@ -51,14 +51,35 @@ def init_models_optimizers(config):
     return (policy, transformer), (optimizer_worldmodel, optimizer_policy), metrics
 
 
-def init_learning():
+def init_learning(config):
     # gather data from the environment
     # init models and optimizers
-    pass
-
-
-def train(config):
     env, buffer = dataset.init_env_buffer()
+
+    nb_games = config.nb_games
+    len_seq = config.len_seq
+
+    state_first = jnp.zeros((6, 3, 3))
+    state_next = jnp.zeros((len_seq, 6, 3, 3))
+    action = jnp.zeros((len_seq, 3))
+
+    # transform state to int8 type
+    state_first = state_first.astype(jnp.int8)
+    state_next = state_next.astype(jnp.int8)
+
+    # action to int32 type
+    action = action.astype(jnp.int32)
+
+    reward = jnp.zeros((len_seq))
+
+    buffer_list = buffer.init(
+        {
+            "state_first": state_first,
+            "action": action,
+            "reward": reward,
+            "state_next": state_next,
+        }
+    )
 
     jit_reset = jax.jit(env.reset)
     jit_step = jax.jit(env.step)
@@ -69,12 +90,36 @@ def train(config):
     policy, transformer = models
     optimizer_worldmodel, optimizer_policy = optimizers
 
+    return (
+        env,
+        buffer,
+        jit_reset,
+        jit_step,
+        policy,
+        transformer,
+        optimizer_worldmodel,
+        optimizer_policy,
+        buffer_list,
+        metrics,
+    )
+
+
+def train(config):
+    (
+        env,
+        buffer,
+        jit_reset,
+        jit_step,
+        policy,
+        transformer,
+        optimizer_worldmodel,
+        optimizer_policy,
+        buffer_list,
+        metrics,
+    ) = init_learning(config)
+
     nnx.display(transformer)
     nnx.display(policy)
-
-    buffer_list = buffer.init(
-        {"state_first": jnp.zeros((6, 6, 3, 3)), "action": jnp.zeros((3,))}
-    )
 
     for _ in range(config.nb_step):
         learning_loop(
@@ -94,11 +139,16 @@ def train(config):
 
 
 def loss_fn_transformer(model: RubikTransformer, batch):
-    logits = model(batch["state_first"], batch["action"])
-    loss = optax.softmax_cross_entropy_with_integer_labels(
-        logits=logits, labels=batch["state_next"]
+    state_logits, reward_value = model(batch["state_first"], batch["action"])
+    loss_crossentropy = optax.softmax_cross_entropy_with_integer_labels(
+        logits=state_logits, labels=batch["state_next"]
     ).mean()
-    return loss, logits
+
+    loss_reward = jnp.square(reward_value - batch["reward"]).mean()
+
+    loss = loss_crossentropy + loss_reward
+
+    return loss, state_logits
 
 
 @nnx.jit
@@ -107,7 +157,7 @@ def train_step_transformer(
 ):
     """Train for a single step."""
     grad_fn = nnx.value_and_grad(loss_fn_transformer, has_aux=True)
-    (loss, logits), grads = grad_fn(model, batch)
+    (loss, _), grads = grad_fn(model, batch)
     metrics.update(loss=loss)
     optimizer.update(grads)
 

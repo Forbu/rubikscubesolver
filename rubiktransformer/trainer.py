@@ -16,7 +16,7 @@ import optax
 from flax import nnx
 
 from rubiktransformer.models import RubikTransformer, PolicyModel
-from rubiktransformer.dataset import dataset
+import rubiktransformer.dataset as dataset
 
 
 # BATCH GENERATIVE CONFIG
@@ -105,6 +105,8 @@ def init_learning(config):
 
 
 def train(config):
+
+    print("Init learning")
     (
         env,
         buffer,
@@ -118,9 +120,11 @@ def train(config):
         metrics,
     ) = init_learning(config)
 
+    print("Init display")
     nnx.display(transformer)
     nnx.display(policy)
 
+    print("Start learning")
     for _ in range(config.nb_step):
         learning_loop(
             policy,
@@ -202,15 +206,17 @@ def learning_loop(
         config.len_seq,
         buffer,
         buffer_list,
-        key,
+        config.jax_key,
     )
 
     # transformer model calibration
     for _ in range(10):
         # we sample from buffer
-        sample = buffer.sample()
+        sample = buffer.sample(buffer_list, config.jax_key)
+
+        print(sample.experience.keys())
 
         # we update the policy
-        train_step_transformer(transformer, optimizer_policy, metrics, sample)
+        train_step_transformer(transformer, optimizer_policy, metrics, sample.experience)
 
     # model evluation

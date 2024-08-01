@@ -133,7 +133,7 @@ class RubikTransformer(nnx.Module):
         return state_prediction, reward
 
 
-class PolicyAction(nnx.Module):
+class PolicyModel(nnx.Module):
     """
     Policy action
     Mapping from state to action

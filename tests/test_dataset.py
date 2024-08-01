@@ -33,26 +33,38 @@ def test_compute_reward():
 def test_gathering_data():
     env, buffer = dataset.init_env_buffer()
 
+    jit_reset = jax.jit(env.reset)
+    jit_step = jax.jit(env.step)
+
     key = jax.random.PRNGKey(0)
 
     nb_games = 10
     len_seq = 6
 
-    state = jnp.zeros((len_seq, 6, 3, 3))
+    state_first = jnp.zeros((6, 3, 3))
+    state_next = jnp.zeros((len_seq, 6, 3, 3))
     action = jnp.zeros((len_seq, 3))
 
     # transform state to int8 type
-    state = state.astype(jnp.int8)
+    state_first = state_first.astype(jnp.int8)
+    state_next = state_next.astype(jnp.int8)
 
     # action to int32 type
     action = action.astype(jnp.int32)
 
     reward = jnp.zeros((len_seq))
 
-    buffer_list = buffer.init({"state": state, "action": action, "reward": reward})
+    buffer_list = buffer.init(
+        {
+            "state_first": state_first,
+            "action": action,
+            "reward": reward,
+            "state_next": state_next,
+        }
+    )
 
     buffer, buffer_list = dataset.gathering_data(
-        env, nb_games, len_seq, buffer, buffer_list, key
+        env, jit_reset, jit_step, nb_games, len_seq, buffer, buffer_list, key
     )
 
     # we test the buffer sampling
@@ -60,5 +72,5 @@ def test_gathering_data():
     batch0 = buffer.sample(buffer_list, rng_key)  # Sample
     batch1 = buffer.sample(buffer_list, rng_key)
 
-    print(batch0.experience["state"].shape)
-    print(batch1.experience["state"].shape)
+    print(batch0.experience["state_first"].shape)
+    print(batch1.experience["state_first"].shape)

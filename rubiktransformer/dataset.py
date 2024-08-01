@@ -16,7 +16,9 @@ for i in range(6):
     GOAL_OBSERVATION = GOAL_OBSERVATION.at[:, :, i].set(i)
 
 
-def gathering_data(env, nb_games, len_seq, buffer, buffer_list, key):
+def gathering_data(
+    env, jit_reset, jit_step, nb_games, len_seq, buffer, buffer_list, key
+):
     """
     In this function we will simply gather data from the environment
     return an array of shape (nb_token_state, nb_games, len_seq) for states
@@ -24,8 +26,6 @@ def gathering_data(env, nb_games, len_seq, buffer, buffer_list, key):
     and (nb_games, len_seq) for rewards
     """
     keys = jax.random.split(key, nb_games)
-    jit_reset = jax.jit(env.reset)
-    jit_step = jax.jit(env.step)
 
     for idx_game in range(nb_games):
         state_save_element = []
@@ -33,6 +33,9 @@ def gathering_data(env, nb_games, len_seq, buffer, buffer_list, key):
         reward_save_element = []
 
         state, _ = jit_reset(keys[idx_game])
+
+        # copy state into state_first
+        state_first = state.cube
 
         for _ in range(len_seq):
             # action = env.action_spec.generate_value()  # random action TODO change this
@@ -52,7 +55,6 @@ def gathering_data(env, nb_games, len_seq, buffer, buffer_list, key):
         state = jnp.stack(state_save_element, axis=0)
         action = jnp.stack(action_save_element, axis=0)
 
-
         # transform action to int32 type
         action = action.astype(jnp.int32)
 
@@ -60,7 +62,13 @@ def gathering_data(env, nb_games, len_seq, buffer, buffer_list, key):
 
         # then we add the state and the action to the buffer
         buffer_list = buffer.add(
-            buffer_list, {"state": state, "action": action, "reward": reward}
+            buffer_list,
+            {
+                "state_first": state_first,
+                "action": action,
+                "reward": reward,
+                "state_next": state,
+            },
         )
 
     return buffer, buffer_list

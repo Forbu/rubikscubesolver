@@ -14,93 +14,53 @@ import jumanji
 # GOAL OBSERVATION
 GOAL_OBSERVATION = jnp.zeros((6, 3, 3))
 for i in range(6):
-    GOAL_OBSERVATION = GOAL_OBSERVATION.at[:, :, i].set(i)
+    GOAL_OBSERVATION = GOAL_OBSERVATION.at[i, :, :].set(i)
 
 
 def fast_gathering_data(
-    env, vmap_reset, vmap_step, batch_size, rollout_length, key
+    env, vmap_reset, vmap_step, batch_size, rollout_length, buffer, buffer_list, key
 ):
     key1, key2 = jax.random.split(key)
 
     keys = jax.random.split(key1, batch_size)
     state, timestep = vmap_reset(keys)
 
-    print("state shape", state.cube.shape)
-
     # Collect a batch of rollouts
     keys = jax.random.split(key2, batch_size)
     rollout = vmap_step(state, keys, rollout_length)
 
-    return rollout
+    # we retrieve the information from the state_first (state), state_next,
+    #  the action and the reward
+    state_first = timestep.observation.cube
+    state_next = rollout.observation.cube
+    action = rollout.extras["action"]
 
+    # now we compute the reward :
+    reward = jnp.zeros((batch_size, rollout_length))
 
-def gathering_data(
-    env, jit_reset, jit_step, nb_games, len_seq, buffer, buffer_list, key
-):
-    """
-    In this function we will simply gather data from the environment
-    return an array of shape (nb_token_state, nb_games, len_seq) for states
-    and (nb_token_action, nb_games, len_seq - 1) for actions
-    and (nb_games, len_seq) for rewards
-    """
-    keys = jax.random.split(key, nb_games)
+    # for each batch / rollout we compute the mean difference between the
+    # observation and the goal
+    # we repeat the goal_observation to match the shape of the observation
+    goal_observation = jnp.repeat(
+        GOAL_OBSERVATION[None, None, :, :, :], batch_size, axis=0
+    )
+    goal_observation = jnp.repeat(goal_observation, rollout_length, axis=1)
+    reward = jnp.where(state_next != goal_observation, -1.0, 1.0)
 
-    for idx_game in range(nb_games):
-        state_save_element = []
-        action_save_element = []
-        reward_save_element = []
+    reward = reward.mean(axis=[2, 3, 4])
 
-        state, _ = jit_reset(keys[idx_game])
-
-        # copy state into state_first
-        state_first = state.cube
-
-        for _ in range(len_seq):
-            # action = env.action_spec.generate_value()  # random action TODO change this
-            action = compute_random_action(env)
-            state, _ = jit_step(state, action)
-
-            state_save_element.append(state.cube)
-            action_save_element.append(action)
-
-            # we should create a custom reward function
-            reward = compute_reward(state.cube)
-
-            reward_save_element.append(reward)
-
-        # here we create the dataset
-        # first we concatenate the state and the action
-        state = jnp.stack(state_save_element, axis=0)
-        action = jnp.stack(action_save_element, axis=0)
-
-        # transform action to int32 type
-        action = action.astype(jnp.int32)
-
-        reward = jnp.array(reward_save_element)
-
-        # then we add the state and the action to the buffer
+    for idx_batch in range(batch_size):
         buffer_list = buffer.add(
             buffer_list,
             {
-                "state_first": state_first,
-                "action": action,
-                "reward": reward,
-                "state_next": state,
+                "state_first": state_first[idx_batch],
+                "action": action[idx_batch],
+                "reward": reward[idx_batch],
+                "state_next": state_next[idx_batch],
             },
         )
 
     return buffer, buffer_list
-
-
-def compute_random_action(env):
-    action_spec = env.action_spec
-
-    array_action = action_spec.generate_value()
-
-    for i in range(len(array_action)):
-        array_action = array_action.at[i].set(random.randint(0, action_spec.maximum[i]))
-
-    return array_action
 
 
 @jax.jit

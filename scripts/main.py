@@ -21,6 +21,7 @@ def main():
         """Configuration class"""
         jax_key: jnp.ndarray = jax.random.PRNGKey(43)
         rngs = nnx.Rngs(42)
+        batch_size: int = 32
         lr_1: float = 1e-3
         lr_2: float = 1e-3
         nb_games: int = 100

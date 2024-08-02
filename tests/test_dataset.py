@@ -4,7 +4,6 @@ Testing the dataset generation
 
 import jax
 import jax.numpy as jnp
-import flax.nnx as nnx
 
 import rubiktransformer.dataset as dataset
 
@@ -18,27 +17,7 @@ def test_init_env_buffer():
     assert len(buffer) == 4
 
 
-def test_compute_reward():
-    """
-    Here we test the compute reward function
-    """
-    state = jnp.zeros((6, 3, 3))
-    for i in range(6):
-        state = state.at[:, :, i].set(i - 1)
-    reward = dataset.compute_reward(state)
-    assert reward == -1.0
-
-
-def test_gathering_data():
-    env, buffer = dataset.init_env_buffer()
-
-    jit_reset = jax.jit(env.reset)
-    jit_step = jax.jit(env.step)
-
-    key = jax.random.PRNGKey(0)
-
-    nb_games = 10
-    len_seq = 6
+def init_buffer(buffer, len_seq=20):
 
     state_first = jnp.zeros((6, 3, 3))
     state_next = jnp.zeros((len_seq, 6, 3, 3))
@@ -62,21 +41,15 @@ def test_gathering_data():
         }
     )
 
-    buffer, buffer_list = dataset.gathering_data(
-        env, jit_reset, jit_step, nb_games, len_seq, buffer, buffer_list, key
-    )
-
-    # we test the buffer sampling
-    rng_key = jax.random.PRNGKey(0)  # Source of randomness.
-    batch0 = buffer.sample(buffer_list, rng_key)  # Sample
-    batch1 = buffer.sample(buffer_list, rng_key)
-
-    print(batch0.experience["state_first"].shape)
-    print(batch1.experience["state_first"].shape)
+    return buffer_list
 
 
 def test_fast_gathering_data():
     env, buffer = dataset.init_env_buffer()
+
+    len_seq = 20
+
+    buffer_list = init_buffer(buffer, len_seq)
 
     def step_fn(state, key):
         action = jax.random.randint(
@@ -100,20 +73,14 @@ def test_fast_gathering_data():
     vmap_reset = jax.vmap(env.reset)
     vmap_step = jax.vmap(run_n_steps, in_axes=(0, 0, None))
 
-    rollout_data = dataset.fast_gathering_data(
-        env, vmap_reset, vmap_step, 10, 20, jax.random.PRNGKey(0)
+    dataset.fast_gathering_data(
+        env, vmap_reset, vmap_step, 10, 20, buffer, buffer_list, jax.random.PRNGKey(0)
     )
 
-    print(rollout_data.observation.cube.shape)
-
-    rollout_data = dataset.fast_gathering_data(
-        env, vmap_reset, vmap_step, 100, 20, jax.random.PRNGKey(0)
+    dataset.fast_gathering_data(
+        env, vmap_reset, vmap_step, 100, 20, buffer, buffer_list, jax.random.PRNGKey(0)
     )
 
-    print(rollout_data.observation.cube.shape)
-
-    rollout_data = dataset.fast_gathering_data(
-        env, vmap_reset, vmap_step, 100, 20, jax.random.PRNGKey(0)
+    dataset.fast_gathering_data(
+        env, vmap_reset, vmap_step, 100, 20, buffer, buffer_list, jax.random.PRNGKey(0)
     )
-
-    print(rollout_data.extras["action"].shape)

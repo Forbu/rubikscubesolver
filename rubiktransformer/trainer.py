@@ -87,8 +87,27 @@ def init_learning(config):
         }
     )
 
-    jit_reset = jax.jit(env.reset)
-    jit_step = jax.jit(env.step)
+    def step_fn(state, key):
+        action = jax.random.randint(
+            key=key,
+            minval=env.action_spec.minimum,
+            maxval=env.action_spec.maximum,
+            shape=(3,),
+        )
+
+        new_state, timestep = env.step(state, action)
+        timestep.extras["action"] = action
+
+        return new_state, timestep
+
+    def run_n_steps(state, key, n):
+        random_keys = jax.random.split(key, n)
+        state, rollout = jax.lax.scan(step_fn, state, random_keys)
+
+        return rollout
+
+    vmap_reset = jax.vmap(env.reset)
+    vmap_step = jax.vmap(run_n_steps, in_axes=(0, 0, None))
 
     # init models and optimizers
     models, optimizers, metrics = init_models_optimizers(config)
@@ -99,8 +118,8 @@ def init_learning(config):
     return (
         env,
         buffer,
-        jit_reset,
-        jit_step,
+        vmap_reset,
+        vmap_step,
         policy,
         transformer,
         optimizer_worldmodel,
@@ -115,8 +134,8 @@ def train(config):
     (
         env,
         buffer,
-        jit_reset,
-        jit_step,
+        vmap_reset,
+        vmap_step,
         policy,
         transformer,
         optimizer_worldmodel,
@@ -137,8 +156,8 @@ def train(config):
         optimizer_policy,
         metrics,
         env,
-        jit_reset,
-        jit_step,
+        vmap_reset,
+        vmap_step,
         buffer,
         buffer_list,
         key=config.rngs,
@@ -189,8 +208,8 @@ def learning_loop(
     optimizer_policy,
     metrics,
     env,
-    jit_reset,
-    jit_step,
+    vmap_reset,
+    vmap_step,
     buffer,
     buffer_list,
     key,
@@ -218,11 +237,11 @@ def learning_loop(
     key, subkey = jax.random.split(config.jax_key)
     config.jax_key = key
 
-    buffer, buffer_list = dataset.gathering_data(
+    buffer, buffer_list = dataset.fast_gathering_data(
         env,
-        jit_reset,
-        jit_step,
-        config.nb_games * 10,
+        vmap_reset,
+        vmap_step,
+        config.nb_games,
         config.len_seq,
         buffer,
         buffer_list,
@@ -232,10 +251,10 @@ def learning_loop(
     # transformer model calibration
     for idx_step in tqdm(range(config.nb_step)):
         if idx_step % config.add_data_every_step == 0:
-            buffer, buffer_list = dataset.gathering_data(
+            buffer, buffer_list = dataset.fast_gathering_data(
                 env,
-                jit_reset,
-                jit_step,
+                vmap_reset,
+                vmap_step,
                 config.nb_games,
                 config.len_seq,
                 buffer,

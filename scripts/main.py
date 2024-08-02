@@ -22,7 +22,7 @@ def main():
         lr_1: float = 1e-3
         lr_2: float = 1e-3
         nb_games: int = 100
-        len_seq: int = 30
+        len_seq: int = 20
         nb_step: int = 100
 
     config = Config()

@@ -29,7 +29,7 @@ class RubikTransformer(nnx.Module):
         rngs=None,
         causal=True,
         dim_input_state=6 * 6 * 3 * 3,
-        dim_output_action=6 * 1 * 3,
+        dim_output_action=6 + 3,
         dim_output_state=6 * 6 * 3 * 3,
         max_len_seq=30,
     ):

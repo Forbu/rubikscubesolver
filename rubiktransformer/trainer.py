@@ -105,7 +105,6 @@ def init_learning(config):
 
 
 def train(config):
-
     print("Init learning")
     (
         env,
@@ -144,6 +143,16 @@ def train(config):
 
 def loss_fn_transformer(model: RubikTransformer, batch):
     state_logits, reward_value = model(batch["state_first"], batch["action"])
+
+    # reshape state_logits
+    # from (batch_size, sequence_length, 324) => (batch_size, sequence_length -1, 54, 6)
+    state_logits = state_logits[:, 1:, :]
+    state_logits = state_logits.reshape(
+        (state_logits.shape[0], state_logits.shape[1], 54, 6)
+    )
+
+    reward_value = reward_value[:, 1:]
+
     loss_crossentropy = optax.softmax_cross_entropy_with_integer_labels(
         logits=state_logits, labels=batch["state_next"]
     ).mean()
@@ -213,10 +222,56 @@ def learning_loop(
     for _ in range(10):
         # we sample from buffer
         sample = buffer.sample(buffer_list, config.jax_key)
-
-        print(sample.experience.keys())
+        sample = reshape_sample(sample)
 
         # we update the policy
-        train_step_transformer(transformer, optimizer_policy, metrics, sample.experience)
+        train_step_transformer(
+            transformer, optimizer_worldmodel, metrics, sample.experience
+        )
 
     # model evluation
+
+
+def reshape_sample(sample):
+    """
+    Simple reshape function to reshape the sample
+
+    Args:
+        sample (object): The sample object.
+
+    Returns:
+        sample (object): The sample object.
+    """
+    # action have to go from (batch_size, seq_len, 3) to (batch_size, seq_len, 6+3)
+    # using one hot encoding because there is 6 possibles values in col [batch_size, seq_len, 0] and
+    # 3 possibles values in [batch_size, seq_len, 2]
+    # (and only one value in [batch_size, seq_len, 1])
+    one_hot_0 = jax.nn.one_hot(sample.experience["action"][:, :, 0], 6)
+    one_hot_1 = jax.nn.one_hot(sample.experience["action"][:, :, 1], 3)
+
+    sample.experience["action"] = jnp.concatenate([one_hot_0, one_hot_1], axis=2)
+
+    # reward have to go from (batch_size, seq_len) to (batch_size, seq_len, 1)
+    sample.experience["reward"] = sample.experience["reward"].reshape(
+        sample.experience["reward"].shape[0], -1, 1
+    )
+
+    # state_first have to go from (batch_size, seq_len, 6, 3, 3)
+    # to (batch_size, seq_len, 6*6*3*3) using one hot encoding on the 6 classes
+    one_hot = jax.nn.one_hot(sample.experience["state_first"], 6)
+    sample.experience["state_first"] = jnp.reshape(
+        one_hot, (sample.experience["state_first"].shape[0], 1, -1)
+    )
+
+    # state_next have to go from (batch_size, seq_len, 6, 3, 3)
+    # to (batch_size, seq_len, 6*3*3)
+    sample.experience["state_next"] = jnp.reshape(
+        sample.experience["state_next"],
+        (
+            sample.experience["state_next"].shape[0],
+            sample.experience["state_next"].shape[1],
+            -1,
+        ),
+    )
+
+    return sample

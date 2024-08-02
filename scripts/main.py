@@ -1,6 +1,8 @@
 """
 Main script
 """
+import time
+import wandb
 
 import jax
 import jax.numpy as jnp
@@ -24,8 +26,16 @@ def main():
         nb_games: int = 100
         len_seq: int = 20
         nb_step: int = 100
+        log_every_step: int = 10
 
     config = Config()
+
+    # init wandb config
+    user = "forbu14"
+    project = "RubikTransformer"
+    display_name = "experiment" + time.strftime("%Y%m%d-%H%M%S")
+
+    wandb.init(entity=user, project=project, name=display_name)
 
     train(config=config)
 

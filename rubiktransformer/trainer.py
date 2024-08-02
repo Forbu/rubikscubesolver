@@ -9,6 +9,10 @@ TODO in the trainer
 
 """
 
+from tqdm import tqdm
+
+import wandb  # for logging
+
 import jax
 import jax.numpy as jnp
 
@@ -46,6 +50,8 @@ def init_models_optimizers(config):
     # metrics
     metrics = nnx.MultiMetric(
         loss=nnx.metrics.Average("loss"),
+        loss_reward=nnx.metrics.Average("loss"),
+        loss_cross_entropy=nnx.metrics.Average("loss"),
     )
 
     return (policy, transformer), (optimizer_worldmodel, optimizer_policy), metrics
@@ -124,21 +130,20 @@ def train(config):
     nnx.display(policy)
 
     print("Start learning")
-    for _ in range(config.nb_step):
-        learning_loop(
-            policy,
-            transformer,
-            optimizer_worldmodel,
-            optimizer_policy,
-            metrics,
-            env,
-            jit_reset,
-            jit_step,
-            buffer,
-            buffer_list,
-            key=config.rngs,
-            config=config,
-        )
+    learning_loop(
+        policy,
+        transformer,
+        optimizer_worldmodel,
+        optimizer_policy,
+        metrics,
+        env,
+        jit_reset,
+        jit_step,
+        buffer,
+        buffer_list,
+        key=config.rngs,
+        config=config,
+    )
 
 
 def loss_fn_transformer(model: RubikTransformer, batch):
@@ -161,7 +166,7 @@ def loss_fn_transformer(model: RubikTransformer, batch):
 
     loss = loss_crossentropy + loss_reward
 
-    return loss, state_logits
+    return loss, loss_crossentropy, loss_reward
 
 
 @nnx.jit
@@ -170,8 +175,10 @@ def train_step_transformer(
 ):
     """Train for a single step."""
     grad_fn = nnx.value_and_grad(loss_fn_transformer, has_aux=True)
-    (loss, _), grads = grad_fn(model, batch)
-    metrics.update(loss=loss)
+    (loss, loss_crossentropy, loss_reward), grads = grad_fn(model, batch)
+    metrics.update(
+        loss=loss, loss_reward=loss_reward, loss_cross_entropy=loss_crossentropy
+    )
     optimizer.update(grads)
 
 
@@ -219,17 +226,39 @@ def learning_loop(
     )
 
     # transformer model calibration
-    for _ in range(10):
-        # we sample from buffer
-        sample = buffer.sample(buffer_list, config.jax_key)
-        sample = reshape_sample(sample)
-
-        # we update the policy
-        train_step_transformer(
-            transformer, optimizer_worldmodel, metrics, sample.experience
+    for idx_step in tqdm(range(config.nb_step)):
+        # training for world model
+        train_step(
+            buffer,
+            buffer_list,
+            transformer,
+            optimizer_worldmodel,
+            metrics,
+            config,
+            idx_step,
         )
 
-    # model evluation
+        # training for policy
+        # TODO
+
+
+def train_step(
+    buffer, buffer_list, transformer, optimizer_worldmodel, metrics, config, idx_step
+):
+    sample = buffer.sample(buffer_list, config.jax_key)
+    sample = reshape_sample(sample)
+
+    # we update the policy
+    train_step_transformer(
+        transformer, optimizer_worldmodel, metrics, sample.experience
+    )
+
+    if idx_step % config.log_every_step == 0:
+        metrics_result = metrics.compute()
+        print(metrics_result)
+
+        wandb.log(metrics_result, step=idx_step)
+        metrics.reset()
 
 
 def reshape_sample(sample):

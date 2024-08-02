@@ -145,7 +145,7 @@ class PolicyModel(nnx.Module):
         nb_layers=3,
         d_model=512,
         input_dim_state=6 * 6 * 3 * 3,
-        output_dim_action=6 * 1 * 3,
+        output_dim_action=6 + 3,
         rngs=None,
     ):
         super().__init__()

@@ -97,7 +97,7 @@ def compute_reward(observation):
     return -((observation - GOAL_OBSERVATION) ** 2).mean()
 
 
-def init_env_buffer(max_length=1024, sample_batch_size=32):
+def init_env_buffer(max_length=1024*20, sample_batch_size=32):
     """
     Initializes the environment and buffer for the Rubik's Cube game.
 

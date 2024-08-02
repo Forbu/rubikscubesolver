@@ -2,7 +2,7 @@
 All the function to train properly the transformer world model
 with the policy model
 
-TODO in the trainer 
+TODO in the trainer
 
 1. Train the transformer world model
 2. Train the policy model
@@ -214,19 +214,35 @@ def learning_loop(
     Returns:
         None
     """
+
+    key, subkey = jax.random.split(config.jax_key)
+    config.jax_key = key
+
     buffer, buffer_list = dataset.gathering_data(
         env,
         jit_reset,
         jit_step,
-        config.nb_games,
+        config.nb_games * 10,
         config.len_seq,
         buffer,
         buffer_list,
-        config.jax_key,
+        subkey,
     )
 
     # transformer model calibration
     for idx_step in tqdm(range(config.nb_step)):
+        # if idx_step % config.add_data_every_step == 0:
+        #     buffer, buffer_list = dataset.gathering_data(
+        #         env,
+        #         jit_reset,
+        #         jit_step,
+        #         config.nb_games,
+        #         config.len_seq,
+        #         buffer,
+        #         buffer_list,
+        #         config.jax_key,
+        #     )
+
         # training for world model
         train_step(
             buffer,
@@ -245,7 +261,10 @@ def learning_loop(
 def train_step(
     buffer, buffer_list, transformer, optimizer_worldmodel, metrics, config, idx_step
 ):
-    sample = buffer.sample(buffer_list, config.jax_key)
+    key, subkey = jax.random.split(config.jax_key)
+    config.jax_key = key
+
+    sample = buffer.sample(buffer_list, subkey)
     sample = reshape_sample(sample)
 
     # we update the policy

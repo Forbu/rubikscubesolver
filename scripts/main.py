@@ -25,8 +25,9 @@ def main():
         lr_2: float = 1e-3
         nb_games: int = 100
         len_seq: int = 20
-        nb_step: int = 100
+        nb_step: int = 1000000
         log_every_step: int = 10
+        add_data_every_step: int = 1000
 
     config = Config()
 

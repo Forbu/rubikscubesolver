@@ -8,3 +8,10 @@ Inspired from :
 - DO TRANSFORMER WORLD MODELS GIVE BETTER POLICY GRADIENTS ? (https://arxiv.org/pdf/2402.05290)  
 
 - TRANSFORMER-BASED WORLD MODELS ARE HAPPY WITH 100K INTERACTIONS (https://arxiv.org/pdf/2303.07109)
+
+
+
+#### Steps in order to train a proper world model
+
+
+

@@ -2,7 +2,6 @@
 Testing the dataset generation
 """
 
-
 import jax
 import jax.numpy as jnp
 import flax.nnx as nnx
@@ -74,3 +73,47 @@ def test_gathering_data():
 
     print(batch0.experience["state_first"].shape)
     print(batch1.experience["state_first"].shape)
+
+
+def test_fast_gathering_data():
+    env, buffer = dataset.init_env_buffer()
+
+    def step_fn(state, key):
+        action = jax.random.randint(
+            key=key,
+            minval=env.action_spec.minimum,
+            maxval=env.action_spec.maximum,
+            shape=(3,),
+        )
+
+        new_state, timestep = env.step(state, action)
+        timestep.extras["action"] = action
+
+        return new_state, timestep
+
+    def run_n_steps(state, key, n):
+        random_keys = jax.random.split(key, n)
+        state, rollout = jax.lax.scan(step_fn, state, random_keys)
+
+        return rollout
+
+    vmap_reset = jax.vmap(env.reset)
+    vmap_step = jax.vmap(run_n_steps, in_axes=(0, 0, None))
+
+    rollout_data = dataset.fast_gathering_data(
+        env, vmap_reset, vmap_step, 10, 20, jax.random.PRNGKey(0)
+    )
+
+    print(rollout_data.observation.cube.shape)
+
+    rollout_data = dataset.fast_gathering_data(
+        env, vmap_reset, vmap_step, 100, 20, jax.random.PRNGKey(0)
+    )
+
+    print(rollout_data.observation.cube.shape)
+
+    rollout_data = dataset.fast_gathering_data(
+        env, vmap_reset, vmap_step, 100, 20, jax.random.PRNGKey(0)
+    )
+
+    print(rollout_data.extras["action"].shape)

@@ -231,17 +231,17 @@ def learning_loop(
 
     # transformer model calibration
     for idx_step in tqdm(range(config.nb_step)):
-        # if idx_step % config.add_data_every_step == 0:
-        #     buffer, buffer_list = dataset.gathering_data(
-        #         env,
-        #         jit_reset,
-        #         jit_step,
-        #         config.nb_games,
-        #         config.len_seq,
-        #         buffer,
-        #         buffer_list,
-        #         config.jax_key,
-        #     )
+        if idx_step % config.add_data_every_step == 0:
+            buffer, buffer_list = dataset.gathering_data(
+                env,
+                jit_reset,
+                jit_step,
+                config.nb_games,
+                config.len_seq,
+                buffer,
+                buffer_list,
+                config.jax_key,
+            )
 
         # training for world model
         train_step(

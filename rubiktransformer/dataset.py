@@ -2,6 +2,7 @@
 Module that will define the dataset for the transformer world model
 It will be generated on the fly with the help of the jumanji library
 """
+
 import random
 
 import jax
@@ -14,6 +15,23 @@ import jumanji
 GOAL_OBSERVATION = jnp.zeros((6, 3, 3))
 for i in range(6):
     GOAL_OBSERVATION = GOAL_OBSERVATION.at[:, :, i].set(i)
+
+
+def fast_gathering_data(
+    env, vmap_reset, vmap_step, batch_size, rollout_length, key
+):
+    key1, key2 = jax.random.split(key)
+
+    keys = jax.random.split(key1, batch_size)
+    state, timestep = vmap_reset(keys)
+
+    print("state shape", state.cube.shape)
+
+    # Collect a batch of rollouts
+    keys = jax.random.split(key2, batch_size)
+    rollout = vmap_step(state, keys, rollout_length)
+
+    return rollout
 
 
 def gathering_data(
@@ -97,7 +115,7 @@ def compute_reward(observation):
     return -((observation - GOAL_OBSERVATION) ** 2).mean()
 
 
-def init_env_buffer(max_length=1024*20, sample_batch_size=32):
+def init_env_buffer(max_length=1024 * 20, sample_batch_size=32):
     """
     Initializes the environment and buffer for the Rubik's Cube game.
 

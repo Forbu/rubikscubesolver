@@ -35,5 +35,8 @@ def test_rubiktransformer():
 
     states_pred, reward = tb(state_input, actions_input)
 
+    print(states_pred.shape)
+    print(reward.shape)
+
     assert states_pred.shape == (5, len_seq + 1, 6 * 6 * 3 * 3)
     assert reward.shape == (5, len_seq + 1, 1)

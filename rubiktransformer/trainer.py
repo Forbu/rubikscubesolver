@@ -50,8 +50,8 @@ def init_models_optimizers(config):
     # metrics
     metrics = nnx.MultiMetric(
         loss=nnx.metrics.Average("loss"),
-        loss_reward=nnx.metrics.Average("loss"),
-        loss_cross_entropy=nnx.metrics.Average("loss"),
+        loss_reward=nnx.metrics.Average("loss_reward"),
+        loss_cross_entropy=nnx.metrics.Average("loss_cross_entropy"),
     )
 
     return (policy, transformer), (optimizer_worldmodel, optimizer_policy), metrics
@@ -166,7 +166,7 @@ def loss_fn_transformer(model: RubikTransformer, batch):
 
     loss = loss_crossentropy + loss_reward
 
-    return loss, loss_crossentropy, loss_reward
+    return loss, (loss_crossentropy, loss_reward)
 
 
 @nnx.jit
@@ -175,7 +175,7 @@ def train_step_transformer(
 ):
     """Train for a single step."""
     grad_fn = nnx.value_and_grad(loss_fn_transformer, has_aux=True)
-    (loss, loss_crossentropy, loss_reward), grads = grad_fn(model, batch)
+    (loss, (loss_crossentropy, loss_reward)), grads = grad_fn(model, batch)
     metrics.update(
         loss=loss, loss_reward=loss_reward, loss_cross_entropy=loss_crossentropy
     )

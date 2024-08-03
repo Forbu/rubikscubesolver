@@ -12,6 +12,7 @@ Homemade version of the transformer
 
 from flax import nnx
 import jax
+import jax.numpy as jnp
 
 
 class FeedForward(nnx.Module):
@@ -95,6 +96,11 @@ class TransformerBlock(nnx.Module):
 
         if self.causal:
             mask = nnx.make_causal_mask(x_forward[:, :, 0])
+
+            # mask is (batch_size, 1, len_seq, len_seq)
+            # make it (batch_size, nb_head, len_seq, len_seq)
+            mask = jnp.repeat(mask, self.multihead.num_heads, axis=1)
+
             x_forward = self.multihead(x_forward, mask=mask)
         else:
             x_forward = self.multihead(x_forward)

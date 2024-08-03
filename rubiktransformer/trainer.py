@@ -41,26 +41,35 @@ def init_models_optimizers(config):
     """
     # init models
     policy = PolicyModel(rngs=config.rngs)
-    transformer = RubikTransformer(rngs=config.rngs)
+    transformer = RubikTransformer(rngs=config.rngs, causal=True)
 
     # init optimizer
-    optimizer_worldmodel = nnx.Optimizer(transformer, optax.adam(config.lr_1))
-    optimizer_policy = nnx.Optimizer(policy, optax.adam(config.lr_2))
+    optimizer_worldmodel = nnx.Optimizer(transformer, optax.adamw(config.lr_1))
+    optimizer_policy = nnx.Optimizer(policy, optax.adamw(config.lr_2))
 
     # metrics
-    metrics = nnx.MultiMetric(
+    metrics_train = nnx.MultiMetric(
         loss=nnx.metrics.Average("loss"),
         loss_reward=nnx.metrics.Average("loss_reward"),
         loss_cross_entropy=nnx.metrics.Average("loss_cross_entropy"),
     )
 
-    return (policy, transformer), (optimizer_worldmodel, optimizer_policy), metrics
+    metrics_eval = nnx.MultiMetric(
+        loss=nnx.metrics.Average("loss"),
+        loss_reward=nnx.metrics.Average("loss_reward"),
+        loss_cross_entropy=nnx.metrics.Average("loss_cross_entropy"),
+        loss_sequence_1=nnx.metrics.Average("loss_sequence_1"),
+        loss_sequence_5=nnx.metrics.Average("loss_sequence_5"),
+        loss_sequence_10=nnx.metrics.Average("loss_sequence_10"),
+    )
+
+    return (policy, transformer), (optimizer_worldmodel, optimizer_policy), (metrics_train, metrics_eval)
 
 
 def init_learning(config):
     # gather data from the environment
     # init models and optimizers
-    env, buffer = dataset.init_env_buffer()
+    env, buffer = dataset.init_env_buffer(sample_batch_size=config.batch_size)
 
     nb_games = config.nb_games
     len_seq = config.len_seq
@@ -114,18 +123,20 @@ def init_learning(config):
 
     policy, transformer = models
     optimizer_worldmodel, optimizer_policy = optimizers
+    metrics_train, metrics_eval = metrics
 
     return (
         env,
         buffer,
+        buffer_list,
         vmap_reset,
         vmap_step,
         policy,
         transformer,
         optimizer_worldmodel,
         optimizer_policy,
-        buffer_list,
-        metrics,
+        metrics_train,
+        metrics_eval,
     )
 
 
@@ -134,14 +145,15 @@ def train(config):
     (
         env,
         buffer,
+        buffer_list,
         vmap_reset,
         vmap_step,
         policy,
         transformer,
         optimizer_worldmodel,
         optimizer_policy,
-        buffer_list,
-        metrics,
+        metrics_train,
+        metrics_eval,
     ) = init_learning(config)
 
     print("Init display")
@@ -154,7 +166,7 @@ def train(config):
         transformer,
         optimizer_worldmodel,
         optimizer_policy,
-        metrics,
+        metrics_train,
         env,
         vmap_reset,
         vmap_step,
@@ -241,7 +253,7 @@ def learning_loop(
         env,
         vmap_reset,
         vmap_step,
-        config.nb_games,
+        config.nb_games * 10,
         config.len_seq,
         buffer,
         buffer_list,
@@ -250,17 +262,17 @@ def learning_loop(
 
     # transformer model calibration
     for idx_step in tqdm(range(config.nb_step)):
-        if idx_step % config.add_data_every_step == 0:
-            buffer, buffer_list = dataset.fast_gathering_data(
-                env,
-                vmap_reset,
-                vmap_step,
-                config.nb_games,
-                config.len_seq,
-                buffer,
-                buffer_list,
-                config.jax_key,
-            )
+        # if idx_step % config.add_data_every_step == 0:
+        #     buffer, buffer_list = dataset.fast_gathering_data(
+        #         env,
+        #         vmap_reset,
+        #         vmap_step,
+        #         config.nb_games,
+        #         config.len_seq,
+        #         buffer,
+        #         buffer_list,
+        #         config.jax_key,
+        #     )
 
         # training for world model
         train_step(

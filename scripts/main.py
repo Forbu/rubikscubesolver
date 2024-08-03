@@ -19,13 +19,13 @@ def main():
     @dataclass
     class Config:
         """Configuration class"""
-        jax_key: jnp.ndarray = jax.random.PRNGKey(43)
-        rngs = nnx.Rngs(42)
-        batch_size: int = 32
+        jax_key: jnp.ndarray = jax.random.PRNGKey(45)
+        rngs = nnx.Rngs(44)
+        batch_size: int = 128
         lr_1: float = 1e-3
         lr_2: float = 1e-3
-        nb_games: int = 100
-        len_seq: int = 20
+        nb_games: int = 128 * 400
+        len_seq: int = 5
         nb_step: int = 1000000
         log_every_step: int = 10
         add_data_every_step: int = 1000
@@ -35,7 +35,7 @@ def main():
     # init wandb config
     user = "forbu14"
     project = "RubikTransformer"
-    display_name = "experiment" + time.strftime("%Y%m%d-%H%M%S")
+    display_name = "experiment_" + time.strftime("%Y%m%d-%H%M%S")
 
     wandb.init(entity=user, project=project, name=display_name)
 

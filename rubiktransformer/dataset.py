@@ -75,6 +75,70 @@ def compute_reward(observation):
     return -((observation - GOAL_OBSERVATION) ** 2).mean()
 
 
+def gather_data_policy(
+    model_policy,
+    model_worldmodel,
+    env,
+    vmap_reset,
+    batch_size,
+    len_seq,
+    key,
+):
+    keys = jax.random.split(key, batch_size)
+    state, timestep = vmap_reset(keys)
+
+    one_hot = jax.nn.one_hot(state.cube, 6)
+    state_first_policy = jnp.reshape(one_hot, (batch_size, 1, -1))
+
+    state_pred = jnp.copy(state_first_policy)
+    action_list = None
+
+    state_pred_list = []
+    uniform0_list = []
+    uniform1_list = []
+
+    # Collect a batch of rollouts
+    for i in range(len_seq):
+        keys = jax.random.split(key, batch_size)
+        key_uniform = jax.random.split(keys[0], 2)
+        key = keys[1]
+
+        # generate random values
+        # random_uniform0, random_uniform1
+        # should be of size (batch_size, 6) and (batch_size, 3)
+        uniform0 = jax.random.uniform(key_uniform[0], (batch_size, 1, 6))
+        uniform1 = jax.random.uniform(key_uniform[1], (batch_size, 1, 3))
+
+        # apply the policy
+        action_result = model_policy(state_pred, uniform0, uniform1)
+
+        if action_list is None:
+            action_list = action_result
+        else:
+            action_list = jnp.concatenate((action_list, action_result), axis=1)
+
+        # save data into a list
+        state_pred_list.append(state_pred)
+        uniform0_list.append(uniform0)
+        uniform1_list.append(uniform1)
+
+        # now we can apply the world model to sample next state
+        state_next, reward = model_worldmodel(state_pred, action_list)
+
+        # convert state_next
+        state_pred = state_next[:, -1, :]
+
+        # add a dimension on axis 1
+        state_pred = jnp.expand_dims(state_pred, axis=1)
+
+    # here we create the dataset in a proper format
+    state_pred_histo = jnp.concatenate(state_pred_list, axis=1)
+    uniform0_histo = jnp.concatenate(uniform0_list, axis=1)
+    uniform1_histo = jnp.concatenate(uniform1_list, axis=1)
+
+    return state_pred_histo, uniform0_histo, uniform1_histo, action_list
+
+
 def init_env_buffer(max_length=1024 * 100, sample_batch_size=32):
     """
     Initializes the environment and buffer for the Rubik's Cube game.

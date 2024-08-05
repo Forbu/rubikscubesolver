@@ -43,8 +43,11 @@ def init_models_optimizers(config):
     policy = PolicyModel(rngs=config.rngs)
     transformer = RubikTransformer(rngs=config.rngs, causal=True)
 
-    # init optimizer
-    optimizer_worldmodel = nnx.Optimizer(transformer, optax.adamw(config.lr_1))
+    optimizer_worldmodel = nnx.Optimizer(transformer, optax.chain(
+    optax.clip_by_global_norm(1.0),
+    optax.lion(config.lr_1 / 100.),
+    ))
+
     optimizer_policy = nnx.Optimizer(policy, optax.adamw(config.lr_2))
 
     # metrics

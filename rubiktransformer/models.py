@@ -28,7 +28,7 @@ class RubikTransformer(nnx.Module):
         nhead: int = 8,
         num_decoder_layers: int = 8,
         dim_feedforward: int = 1024,
-        dropout: float = 0.05,
+        dropout: float = 0.00,
         layer_norm_eps=1e-5,
         rngs=None,
         causal=True,

@@ -58,7 +58,7 @@ class TransformerBlock(nnx.Module):
         d_model: int = 512,
         nhead: int = 8,
         dim_feedforward: int = 2048,
-        dropout: float = 0.1,
+        dropout: float = 0.0,
         layer_norm_eps: float = 1e-5,
         rngs=None,
         causal=False,
@@ -126,7 +126,7 @@ class Transformer(nnx.Module):
         nhead: int = 8,
         num_decoder_layers: int = 6,
         dim_feedforward: int = 2048,
-        dropout: float = 0.1,
+        dropout: float = 0.,
         # decoder only
         layer_norm_eps: float = 1e-5,
         nb_embedding: int = 64,

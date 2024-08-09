@@ -73,21 +73,22 @@ def compute_reward(observation):
     the goal g is of size 3x3x6 with g[:, :, i] = i
     """
     return -((observation - GOAL_OBSERVATION) ** 2).mean()
+
+
 def gather_data_policy(
-    model_policy: PolicyModel,
-    model_worldmodel: RubikTransformer,
+    model_policy,
+    model_worldmodel,
     env,
     vmap_reset,
     batch_size,
     len_seq,
-    key,):
+    key,
+):
     keys = jax.random.split(key, batch_size)
     state, timestep = vmap_reset(keys)
 
     one_hot = jax.nn.one_hot(state.cube, 6)
-    state_first_policy = jnp.reshape(
-        one_hot, (batch_size, 1, -1)
-    )
+    state_first_policy = jnp.reshape(one_hot, (batch_size, 1, -1))
 
     state_pred = jnp.copy(state_first_policy)
     action_list = None
@@ -101,10 +102,10 @@ def gather_data_policy(
         keys = jax.random.split(key, batch_size)
         key_uniform = jax.random.split(keys[0], 2)
         key = keys[1]
-        
-        # generate random values 
+
+        # generate random values
         # random_uniform0, random_uniform1
-        # should be of size (batch_size, 6) and (batch_size, 3) 
+        # should be of size (batch_size, 6) and (batch_size, 3)
         uniform0 = jax.random.uniform(key_uniform[0], (batch_size, 1, 6))
         uniform1 = jax.random.uniform(key_uniform[1], (batch_size, 1, 3))
 

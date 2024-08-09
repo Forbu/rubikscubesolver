@@ -329,7 +329,7 @@ def reshape_sample(sample):
     # 3 possibles values in [batch_size, seq_len, 2]
     # (and only one value in [batch_size, seq_len, 1])
     one_hot_0 = jax.nn.one_hot(sample.experience["action"][:, :, 0], 6)
-    one_hot_1 = jax.nn.one_hot(sample.experience["action"][:, :, 1], 3)
+    one_hot_1 = jax.nn.one_hot(sample.experience["action"][:, :, 2], 3)
 
     sample.experience["action"] = jnp.concatenate([one_hot_0, one_hot_1], axis=2)
 

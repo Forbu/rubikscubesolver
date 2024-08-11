@@ -192,49 +192,12 @@ class PolicyModel(nnx.Module):
         state0 = self.linear0(state)
         state1 = self.linear1(state)
 
-        if self.training:
-            # on training we sample
-            state0_grad = gumbel_softmax_sample(random_uniform0, state0, temp=self.temp)
-            state1_grad = gumbel_softmax_sample(random_uniform1, state1, temp=self.temp)
+        # softmax on the two outputs
+        state0 = jax.nn.softmax(state0 / self.temp, axis=-1)
+        state1 = jax.nn.softmax(state1 / self.temp, axis=-1)
 
-            # discretize with straight through estimator
-            state0 = jnp.argmax(state0_grad, axis=-1)
-            state1 = jnp.argmax(state1_grad, axis=-1)
+        # concat the two outputs
+        action_all = jnp.concatenate([state0, state1], axis=-1)
 
-            # one hot encoding
-            state0 = jax.nn.one_hot(state0, self.output_dim_action_0)
-            state1 = jax.nn.one_hot(state1, self.output_dim_action_1)
-
-            # straight through estimator
-            state0 = state0 + (state0_grad - jax.lax.stop_gradient(state0_grad))
-            state1 = state1 + (state1_grad - jax.lax.stop_gradient(state1_grad))
-
-            state = jnp.concatenate([state0, state1], axis=-1)
-
-            return state
-        else:
-            # on eval simply the one hot vector
-            state0 = nn.softmax(state0, axis=-1)
-            state1 = nn.softmax(state1, axis=-1)
-
-            state0_idx = jnp.argmax(state0, axis=-1)
-            state1_idx = jnp.argmax(state1, axis=-1)
-
-            state0 = jax.nn.one_hot(state0_idx, self.output_dim_action_0)
-            state1 = jax.nn.one_hot(state1_idx, self.output_dim_action_1)
-
-            state = jnp.concatenate([state0, state1], axis=-1)
-
-            return state
-
-
-def gumbel_sample(random_uniform):
-    """Sample Gumbel noise."""
-    uniform = random_uniform
-    return -jnp.log(EPS - jnp.log(uniform + EPS))
-
-
-def gumbel_softmax_sample(random_uniform, logits, temp=1.0):
-    """Sample from the Gumbel softmax / concrete distribution."""
-    gumbel_noise = gumbel_sample(random_uniform)
-    return nn.softmax((logits + gumbel_noise) / temp, axis=-1)
+        return action_all
+        

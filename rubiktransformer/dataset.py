@@ -112,6 +112,8 @@ def gather_data_policy(
         # apply the policy
         action_result = model_policy(state_pred, uniform0, uniform1)
 
+        print("action_result", action_result.shape)
+
         if action_list is None:
             action_list = action_result
         else:

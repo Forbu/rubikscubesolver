@@ -13,5 +13,11 @@ Inspired from :
 
 #### Steps in order to train a proper world model
 
+This is the overall training architecture :
 
+![training](images/trainingsetup.png)
+
+We can first train a world model with data gather from random experience (or policy experience).
+
+Then we can train a policy model with the loss directly being the sum of reward.
 

@@ -34,6 +34,7 @@ def fast_gathering_data(
     state_first = timestep.observation.cube
     state_next = rollout.observation.cube
     action = rollout.extras["action"]
+    action_pred = rollout.extras["action_pred"]
 
     # now we compute the reward :
     reward = jnp.zeros((batch_size, rollout_length))
@@ -57,6 +58,7 @@ def fast_gathering_data(
                 "action": action[idx_batch],
                 "reward": reward[idx_batch],
                 "state_next": state_next[idx_batch],
+                "action_pred": action_pred[idx_batch], # here we could manage the action prediction
             },
         )
 

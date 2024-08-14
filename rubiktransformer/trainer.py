@@ -331,7 +331,7 @@ def reshape_sample(sample):
     one_hot_0 = jax.nn.one_hot(sample.experience["action"][:, :, 0], 6)
     one_hot_1 = jax.nn.one_hot(sample.experience["action"][:, :, 2], 3)
 
-    sample.experience["action"] = jnp.concatenate([one_hot_0, one_hot_1], axis=2)
+    sample.experience["action"] = sample.experience["action_pred"]
 
     # reward have to go from (batch_size, seq_len) to (batch_size, seq_len, 1)
     sample.experience["reward"] = sample.experience["reward"].reshape(

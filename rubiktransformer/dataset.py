@@ -69,12 +69,20 @@ def fast_gathering_data(
 def compute_reward(observation):
     """
     Here we compute the reward for a given observation
-    the observation here is a 3x3x6 array with value between 0 and 5
+    the observation here is a 6x3x3 array with value between 0 and 5
     that define the observation of the rubik cube
     We want to check the distance between the observation and the goal
-    the goal g is of size 3x3x6 with g[:, :, i] = i
+    the goal g is of size 6x3x3 with g[i, :, :] = i
     """
-    return -((observation - GOAL_OBSERVATION) ** 2).mean()
+    if observation.shape == (6, 3, 3):
+        return -((observation - GOAL_OBSERVATION) ** 2).mean()
+    elif len(observation.shape) == 4:
+        # we repeat the goal_observation to match the shape of the observation
+        goal_observation = jnp.repeat(
+            GOAL_OBSERVATION[None, :, :, :], observation.shape[0], axis=0
+        )
+        return -((observation - goal_observation) ** 2).mean(axis=[1, 2, 3])
+
 
 
 def gather_data_policy(
@@ -114,7 +122,6 @@ def gather_data_policy(
         # apply the policy
         action_result = model_policy(state_pred, uniform0, uniform1)
 
-        print("action_result", action_result.shape)
 
         if action_list is None:
             action_list = action_result

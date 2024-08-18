@@ -181,7 +181,7 @@ class PolicyModel(nnx.Module):
             in_features=input_dim_state, out_features=d_model, rngs=rngs
         )
 
-    def __call__(self, state, random_uniform0, random_uniform1):
+    def __call__(self, state, random_uniform0=None, random_uniform1=None):
         state = self.linear_in(state)
         state = nnx.gelu(state)
 

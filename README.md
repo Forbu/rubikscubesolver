@@ -21,3 +21,13 @@ We can first train a world model with data gather from random experience (or pol
 
 Then we can train a policy model with the loss directly being the sum of reward.
 
+#### Differents experiences
+
+- Gumble softmax gives really unstable gradiant.
+
+- Better have a model trained on policy probabilities than exact results (for world model)
+
+- Should we be using a causal transformer for the policy model too ? TODO later
+
+
+

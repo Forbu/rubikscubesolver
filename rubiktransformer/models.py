@@ -200,4 +200,117 @@ class PolicyModel(nnx.Module):
         action_all = jnp.concatenate([state0, state1], axis=-1)
 
         return action_all
-        
+
+
+class PolicyTransformer(nnx.Module):
+    """
+    Policy action
+    Mapping from state to action
+
+    """
+
+    def __init__(
+        self,
+        d_model=512,
+        input_dim_state=6 * 6 * 3 * 3,
+        output_dim_action_0=6,
+        output_dim_action_1=3,
+        rngs=None,
+        training=True,
+        temp=1.0,
+        max_seq_len=30,
+        nhead: int = 8,
+        num_decoder_layers: int = 8,
+        dim_feedforward: int = 1024,
+        dropout=0.,
+        layer_norm_eps= 1e-5,
+        causal=True,
+    ):
+        super().__init__()
+        self.input_dim_state = input_dim_state
+        self.output_dim_action_0 = output_dim_action_0
+        self.output_dim_action_1 = output_dim_action_1
+        self.training = training
+        self.temp = temp
+        self.max_seq_len = max_seq_len
+        self.num_decoder_layers = num_decoder_layers
+
+        self.transformer = nnx.List(
+            [
+                TransformerBlock(
+                    d_model=d_model,
+                    nhead=nhead,
+                    dim_feedforward=dim_feedforward,
+                    dropout=dropout,
+                    layer_norm_eps=layer_norm_eps,
+                    rngs=rngs,
+                    causal=causal,
+                )
+                for _ in range(num_decoder_layers)
+            ],
+        )
+
+        # two mapping functions to transform the state and the action
+        self.state_mapping = nnx.Linear(
+            out_features=d_model, in_features=input_dim_state, rngs=rngs
+        )
+
+        self.layernorm = nnx.LayerNorm(num_features=d_model, rngs=rngs)
+
+        # output layer for state value
+        self.linear_0 = nnx.Linear(
+            in_features=d_model, out_features=output_dim_action_0, rngs=rngs
+        )
+
+        # output layer for reward value
+        self.linear_1 = nnx.Linear(in_features=d_model, out_features=output_dim_action_1, rngs=rngs)
+
+        # position embedding
+        self.position_embedding = nnx.Embed(
+            num_embeddings=max_seq_len, features=d_model, rngs=rngs
+        )
+
+    def __call__(self, state):
+        """
+        Dimensions :
+        Inputs:
+            state is (batch_size, seq_len, dim_input_state)
+
+        Outputs:
+            state is (batch_size, seq_len, 6) and (batch_size, seq_len, 3) 
+
+        """
+
+        state = self.state_mapping(state)
+
+        transformer_input = state
+
+        # add position embedding
+        position_embedding = self.position_embedding(
+            jnp.arange(transformer_input.shape[1], dtype=jnp.int32)
+        )
+
+        # repeat to handle batch size (seq_len, d_model) => (batch_size, seq_len, d_model)
+        position_embedding = position_embedding[None, :, :]
+
+        position_embedding = jnp.repeat(
+            position_embedding, transformer_input.shape[0], axis=0
+        )
+
+        transformer_input = transformer_input + position_embedding
+
+        for i in range(self.num_decoder_layers):
+            transformer_input = self.transformer[i](transformer_input)
+
+        transformer_out = self.layernorm(transformer_input)
+        action_0 = self.linear_0(transformer_out)
+        action_1 = self.linear_1(transformer_out)
+
+        # softmax on the two outputs
+        action_0 = jax.nn.softmax(action_0 / self.temp, axis=-1)
+        action_1 = jax.nn.softmax(action_1 / self.temp, axis=-1)
+
+        # concat the two outputs
+        action_all = jnp.concatenate([action_0, action_1], axis=-1)
+
+        return action_all

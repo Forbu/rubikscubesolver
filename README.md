@@ -27,7 +27,9 @@ Then we can train a policy model with the loss directly being the sum of reward.
 
 - Better have a model trained on policy probabilities than exact results (for world model)
 
-- Should we be using a causal transformer for the policy model too ? TODO later
+- Should we be using a causal transformer for the policy model too ? Doesn't work great
+
+- Forcing the WM to train only for non proba (High scale / temperature) degrade the performance
 
 
 

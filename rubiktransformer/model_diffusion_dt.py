@@ -179,7 +179,7 @@ class RubikDTTransformer(nnx.Module):
 
         # sequential module
         context_value = self.mapping_context(context)  # shape (batch, d_model)
-        context_value = context_value[None, :, :]
+        context_value = context_value[:, None, :]
 
         # repeat to handle batch size (seq_len, d_model) => (batch_size, seq_len, d_model)
         context_value = jnp.repeat(context_value, transformer_input.shape[1], axis=1)

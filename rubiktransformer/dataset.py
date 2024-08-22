@@ -65,6 +65,50 @@ def fast_gathering_data(
     return buffer, buffer_list
 
 
+def fast_gathering_data_diffusion(
+    env, vmap_reset, vmap_step, batch_size, rollout_length, buffer, buffer_list, key
+):
+    key1, key2 = jax.random.split(key)
+
+    keys = jax.random.split(key1, batch_size)
+    state, timestep = vmap_reset(keys)
+
+    # Collect a batch of rollouts
+    keys = jax.random.split(key2, batch_size)
+    rollout = vmap_step(state, keys, rollout_length)
+
+    # we retrieve the information from the state_first (state), state_next,
+    #  the action and the reward
+    state_histo = rollout.observation.cube
+    action = rollout.extras["action"]
+
+    # now we compute the reward :
+    reward = jnp.zeros((batch_size, rollout_length))
+
+    # for each batch / rollout we compute the mean difference between the
+    # observation and the goal
+    # we repeat the goal_observation to match the shape of the observation
+    goal_observation = jnp.repeat(
+        GOAL_OBSERVATION[None, None, :, :, :], batch_size, axis=0
+    )
+    goal_observation = jnp.repeat(goal_observation, rollout_length, axis=1)
+    reward = jnp.where(state_histo != goal_observation, -1.0, 1.0)
+
+    reward = reward.mean(axis=[2, 3, 4])
+    reward = reward[:, -1] - reward[:, rollout_length//2]
+
+    for idx_batch in range(batch_size):
+        buffer_list = buffer.add(
+            buffer_list,
+            {
+                "action": action[idx_batch],
+                "reward": reward[idx_batch],
+                "state_histo": state_histo[idx_batch],
+            },
+        )
+
+    return buffer, buffer_list
+
 @jax.jit
 def compute_reward(observation):
     """

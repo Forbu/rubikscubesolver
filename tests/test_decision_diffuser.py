@@ -30,10 +30,10 @@ def test_decision_diffuser():
     len_seq = 5
 
     # mock input
-    state_past = jnp.ones((1, len_seq, 6 * 6 * 3 * 3))
-    state_future = jnp.ones((1, len_seq, 6 * 6 * 3 * 3))
+    state_past = jnp.ones((1, len_seq, 54, 6))
+    state_future = jnp.ones((1, len_seq, 54, 6))
     context = jnp.ones((1, 2))
 
     state_pred_past, state_pred_future = decision_diffuser(state_past, state_future, context)
 
-    assert state_pred_future.shape == (1, len_seq, 6 * 6 * 3 * 3)
+    assert state_pred_future.shape == (1, len_seq, 54, 6)

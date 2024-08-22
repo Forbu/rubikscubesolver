@@ -19,6 +19,7 @@ class Sequential(nnx.Module):
     """
     Sequential module
     """
+
     def __init__(self, dim_input, dim_output, dim_middle, nb_layer, rngs):
         super().__init__()
 
@@ -35,8 +36,12 @@ class Sequential(nnx.Module):
             ]
         )
 
-        self.input_mapping = nnx.Linear(in_features=dim_input, out_features=dim_middle, rngs=rngs)
-        self.output_mapping = nnx.Linear(in_features=dim_middle, out_features=dim_output, rngs=rngs)
+        self.input_mapping = nnx.Linear(
+            in_features=dim_input, out_features=dim_middle, rngs=rngs
+        )
+        self.output_mapping = nnx.Linear(
+            in_features=dim_middle, out_features=dim_output, rngs=rngs
+        )
 
     def __call__(self, x):
         x = self.input_mapping(x)
@@ -46,6 +51,7 @@ class Sequential(nnx.Module):
             x = nn.gelu(x)
         x = self.output_mapping(x)
         return x
+
 
 class RubikDTTransformer(nnx.Module):
     """
@@ -64,7 +70,7 @@ class RubikDTTransformer(nnx.Module):
         layer_norm_eps=1e-5,
         causal=True,
         dim_input_state=6 * 6 * 3 * 3,
-        dim_context_input=2, # reward and time step
+        dim_context_input=2,  # reward and time step
         dim_output_state=6 * 6 * 3 * 3,
         max_len_seq=50,
         rngs=None,
@@ -136,11 +142,19 @@ class RubikDTTransformer(nnx.Module):
             context is (batch_size, dim_context_input)
 
         Outputs:
-            state_prediction is (batch_size, seq_len, dim_output_state / 6, 6)
+            state_prediction is (batch_size, seq_len, dim_output_state )
 
         """
         seq_len_past = state_past.shape[1]
         seq_len_future = state_future.shape[1]
+
+        # flatten both states
+        state_past = jnp.reshape(
+            state_past, (state_past.shape[0], state_past.shape[1], -1)
+        )
+        state_future = jnp.reshape(
+            state_future, (state_future.shape[0], state_future.shape[1], -1)
+        )
 
         # concat the two states
         transformer_input = jnp.concatenate([state_past, state_future], axis=1)
@@ -164,7 +178,7 @@ class RubikDTTransformer(nnx.Module):
         transformer_input = transformer_input + position_embedding
 
         # sequential module
-        context_value = self.mapping_context(context) # shape (batch, d_model)
+        context_value = self.mapping_context(context)  # shape (batch, d_model)
         context_value = context_value[None, :, :]
 
         # repeat to handle batch size (seq_len, d_model) => (batch_size, seq_len, d_model)
@@ -179,4 +193,14 @@ class RubikDTTransformer(nnx.Module):
         transformer_out = self.layernorm(transformer_input)
         state_prediction = self.linear(transformer_out)
 
-        return state_prediction[:, seq_len_past:, :], state_prediction[:, :seq_len_past, :]
+        state_prediction_past_reshaped = jnp.reshape(
+            state_prediction[:, :seq_len_past, :],
+            (state_prediction.shape[0], seq_len_past, 54, 6),
+        )
+
+        state_prediction_future_reshaped = jnp.reshape(
+            state_prediction[:, seq_len_past:, :],
+            (state_prediction.shape[0], seq_len_future, 54, 6),
+        )
+
+        return state_prediction_past_reshaped, state_prediction_future_reshaped

@@ -1,6 +1,8 @@
 # rubikscubesolver
 Solviing rubik's cube with transformer world model
 
+Experience 1 : 
+
 The idea is to use new architecture and RL algorithm around transformer and world model to solve rubik's cube.
 
 Inspired from : 
@@ -9,9 +11,18 @@ Inspired from :
 
 - TRANSFORMER-BASED WORLD MODELS ARE HAPPY WITH 100K INTERACTIONS (https://arxiv.org/pdf/2303.07109)
 
+Experience 2 : 
+
+After the not-working epxerience 1, we try another approach the decision transformer / inverse RL setup :
+
+Inspired from :
+
+- IS CONDITIONAL GENERATIVE MODELING ALL YOU NEED FOR DECISION-MAKING (https://arxiv.org/pdf/2211.15657)
+
+- Decision Transformer: Reinforcement Learning via Sequence Modeling (https://arxiv.org/abs/2106.01345)
 
 
-#### Steps in order to train a proper world model
+#### Experience 1 : Steps in order to train a proper world model
 
 This is the overall training architecture :
 
@@ -21,7 +32,7 @@ We can first train a world model with data gather from random experience (or pol
 
 Then we can train a policy model with the loss directly being the sum of reward.
 
-#### Differents experiences
+## Differents experiences
 
 - Gumble softmax gives really unstable gradiant.
 
@@ -31,5 +42,12 @@ Then we can train a policy model with the loss directly being the sum of reward.
 
 - Forcing the WM to train only for non proba (High scale / temperature) degrade the performance
 
+Overall bad results.
+
+Conclusion : using a world model gradient doesn't work great.
+
+#### Experience 2 : Step to train a decision diffuser transformer
+
+We use the same setup than in the paper (https://arxiv.org/pdf/2211.15657), currently experiencing
 
 

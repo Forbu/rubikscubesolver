@@ -103,7 +103,7 @@ class RubikDTTransformer(nnx.Module):
             dim_input=dim_context_input,
             dim_output=d_model,
             dim_middle=d_model,
-            nb_layer=2,
+            nb_layer=3,
             rngs=rngs,
         )
 
@@ -179,4 +179,4 @@ class RubikDTTransformer(nnx.Module):
         transformer_out = self.layernorm(transformer_input)
         state_prediction = self.linear(transformer_out)
 
-        return state_prediction[:, seq_len_past:, :, :], state_prediction[:, :seq_len_past, :, :]
+        return state_prediction[:, seq_len_past:, :], state_prediction[:, :seq_len_past, :]

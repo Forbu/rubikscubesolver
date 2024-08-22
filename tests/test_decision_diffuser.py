@@ -19,8 +19,7 @@ def test_decision_diffuser():
         dim_feedforward=1024,
         dropout=0.00,
         layer_norm_eps=1e-5,
-        rngs=None,
-        causal=True,
+        causal=False,
         dim_input_state=6 * 6 * 3 * 3,
         dim_context_input=2,  # reward and time step
         dim_output_state=6 * 6 * 3 * 3,
@@ -32,8 +31,9 @@ def test_decision_diffuser():
 
     # mock input
     state_past = jnp.ones((1, len_seq, 6 * 6 * 3 * 3))
+    state_future = jnp.ones((1, len_seq, 6 * 6 * 3 * 3))
     context = jnp.ones((1, 2))
 
-    state_pred = decision_diffuser(state_past, context)
+    state_pred_past, state_pred_future = decision_diffuser(state_past, state_future, context)
 
-    assert state_pred.shape == (1, len_seq, 6 * 6 * 3 * 3)
+    assert state_pred_future.shape == (1, len_seq, 6 * 6 * 3 * 3)

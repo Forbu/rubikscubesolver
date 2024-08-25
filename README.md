@@ -50,4 +50,20 @@ Conclusion : using a world model gradient doesn't work great.
 
 We use the same setup than in the paper (https://arxiv.org/pdf/2211.15657), currently experiencing
 
+Current architecture setup for the decision transformer (taken from paper) :
+
+![decision](images/decision_diffuser.png)
+
+Results converge well and by choosing "small noise" of the dirichlet distribution only the decision transformer can simulate a few step :
+
+![loss](images/loss.png)
+
+We manually check that the model achieve to simulate some step and indeed :
+
+![chekcing](images/manualchecking.png)
+
+(simulation of one typical rubik move)
+
+Now we want to choose the action that will make the model solve the rubik's cube.
+
 

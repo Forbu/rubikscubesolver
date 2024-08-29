@@ -60,10 +60,13 @@ Results converge well and by choosing "small noise" of the dirichlet distributio
 
 We manually check that the model achieve to simulate some step and indeed :
 
-![chekcing](images/manualchecking.png)
+![checking](images/manualchecking.png)
 
 (simulation of one typical rubik move)
 
 Now we want to choose the action that will make the model solve the rubik's cube.
 
+Here is the setup to improve the model output :
+
+![chekcing](images/update_training.png)
 

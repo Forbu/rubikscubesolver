@@ -6,7 +6,7 @@ import jax
 import jax.numpy as jnp
 import flax.nnx as nnx
 
-from rubiktransformer.model_diffusion_dt import RubikDTTransformer
+from rubiktransformer.model_diffusion_dt import RubikDTTransformer, InverseRLModel
 
 
 def test_decision_diffuser():
@@ -37,3 +37,21 @@ def test_decision_diffuser():
     state_pred_past, state_pred_future = decision_diffuser(state_past, state_future, context)
 
     assert state_pred_future.shape == (1, len_seq, 54, 6)
+
+def test_inverserlmodel():
+    rng = nnx.Rngs(42)
+
+    inverse_rl_model = InverseRLModel(
+        dim_input_state = 6 * 6 * 3 * 3,
+        dim_output_action = 6 + 3,
+        dim_middle = 1024,
+        nb_layers = 3,
+        rngs=rng,
+    )
+
+    state_past = jnp.ones((1, 6 * 6 * 3 * 3))
+    state_future = jnp.ones((1, 6 * 6 * 3 * 3))
+
+    action = inverse_rl_model(state_past, state_future)
+
+    assert action.shape == (1, 6 + 3)

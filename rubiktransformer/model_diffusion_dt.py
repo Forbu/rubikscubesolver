@@ -204,3 +204,72 @@ class RubikDTTransformer(nnx.Module):
         )
 
         return state_prediction_past_reshaped, state_prediction_future_reshaped
+
+
+# here we create another for the inverse model
+class InverseRLModel(nnx.Module):
+    """
+    Inverse RL Model
+
+    Take s_t and s_t+1 as input and output the action a_t+1
+
+    The neural architecture is a simple MLP
+
+    """
+
+    def __init__(
+        self,
+        dim_input_state,
+        dim_output_action,
+        dim_middle,
+        nb_layers,
+        rngs=None,
+    ):
+        super().__init__()
+
+        self.dim_input_state = dim_input_state
+        self.dim_output_action = dim_output_action
+
+        self.dim_middle = dim_middle
+
+        assert nb_layers >= 2, "nb_layer should be at least 2"
+
+        self.layers = nnx.List(
+            [
+                nnx.Linear(in_features=dim_middle, out_features=dim_middle, rngs=rngs)
+                for _ in range(nb_layers - 2)
+            ]
+        )
+
+        self.state_mapping = nnx.Linear(
+            in_features=dim_input_state * 2, out_features=dim_middle, rngs=rngs
+        )
+
+        self.action_mapping = nnx.Linear(
+            in_features=dim_middle, out_features=dim_output_action, rngs=rngs
+        )
+
+    def __call__(self, state_t, state_tp1):
+        """
+        Dimensions :
+        Inputs:
+            state_past is (batch_size, dim_input_state)
+            state_future is (batch_size, dim_input_state)
+
+        Outputs:
+            action is (batch_size, dim_output_action )
+
+        """
+
+        state = jnp.concatenate([state_t, state_tp1], axis=-1)
+
+        state = self.state_mapping(state)
+        state = nnx.gelu(state)
+
+        for layer in self.layers:
+            state = layer(state)
+            state = nnx.gelu(state)
+
+        action = self.action_mapping(state)
+
+        return action

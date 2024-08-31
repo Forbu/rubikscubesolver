@@ -95,7 +95,7 @@ def fast_gathering_data_diffusion(
     reward = jnp.where(state_histo != goal_observation, -1.0, 1.0)
 
     reward = reward.mean(axis=[2, 3, 4])
-    reward = reward[:, -1] - reward[:, rollout_length//2]
+    reward = reward[:, -1] - reward[:, rollout_length//4]
 
     for idx_batch in range(batch_size):
         buffer_list = buffer.add(

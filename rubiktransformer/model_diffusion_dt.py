@@ -107,7 +107,7 @@ class RubikDTTransformer(nnx.Module):
         # sequential module
         self.mapping_context = Sequential(
             dim_input=dim_context_input,
-            dim_output=d_model,
+            dim_output=d_model * 2,
             dim_middle=d_model,
             nb_layer=3,
             rngs=rngs,
@@ -185,7 +185,7 @@ class RubikDTTransformer(nnx.Module):
         context_value = jnp.repeat(context_value, transformer_input.shape[1], axis=1)
 
         # adding context value
-        transformer_input = transformer_input + context_value
+        transformer_input = transformer_input * context_value[:, :, :self.d_model] + context_value[:, :, self.d_model:] 
 
         for i in range(self.num_decoder_layers):
             transformer_input = self.transformer_blocks[i](transformer_input)

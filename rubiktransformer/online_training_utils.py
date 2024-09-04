@@ -1,6 +1,9 @@
 import jax
 import jax.numpy as jnp
 import flax.nnx as nnx
+
+import wandb
+
 from rubiktransformer.dataset import GOAL_OBSERVATION
 
 
@@ -179,6 +182,9 @@ def improve_training_loop(
     buffer,
     buffer_list,
     train_step_transformer_rf,
+    optimizer_diffuser,
+    metrics_train,
+    env,
 ):
     """
     Relaunch the training loop with those new data incorporated into the buffer
@@ -201,7 +207,7 @@ def improve_training_loop(
         config.jax_key = key
 
         state_past, state, actions_past = generate_past_state_with_random_policy(
-            key, vmap_reset, step_jit_env, config
+            key, vmap_reset, step_jit_env, config, env
         )
 
         actions_futur = apply_decision_diffuser_policy(
@@ -263,7 +269,6 @@ def sampling_model(key, model, sample_eval, nb_step=100, config=None):
         ) * (estimation_proba_future - noise_future)
 
     return noise_future
-
 
 def reshape_diffusion_setup(sample, key=jax.random.PRNGKey(0)):
     sample.experience["state_histo"] = sample.experience["state_histo"].reshape(

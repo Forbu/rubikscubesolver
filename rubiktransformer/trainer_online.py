@@ -2,18 +2,17 @@
 In this file, we define the online training process for the RubikTransformer model.
 
 """
-
 import os
-from tqdm import tqdm
 import pickle
-
-import wandb  # for logging
 import time
 from dataclasses import dataclass
+from tqdm import tqdm
 
 import jax
 import jax.numpy as jnp
 import flax.nnx as nnx
+
+import wandb  # for logging
 
 import optax
 
@@ -21,10 +20,7 @@ from rubiktransformer.model_diffusion_dt import RubikDTTransformer, InverseRLMod
 import rubiktransformer.dataset as dataset
 from rubiktransformer.trainer import reshape_sample
 
-from rubiktransformer.online_training_utils import (
-    run_n_steps,
-    reshape_diffusion_setup
-)
+from rubiktransformer.online_training_utils import run_n_steps, reshape_diffusion_setup
 
 
 def init_config_wandb():
@@ -114,6 +110,8 @@ def init_model_optimizer(config):
         metrics_train,
         metrics_eval,
         metrics_inverse,
+        transformer,
+        inverse_rl_model
     )
 
 
@@ -170,7 +168,7 @@ def loss_fn_transformer_rf(model: RubikDTTransformer, batch):
         logits=state_future, labels=batch["state_future"]
     ).mean(axis=[1, 2])
 
-    weight = jnp.clip(1.0 / (1.0 - batch["time_step"][:, 0, 0, 0]), min=0.005, max=1.5)
+    weight = jnp.clip(1.0 / (1.0 - batch["time_step"][:, 0, 0, 0]), min=0.005, max=2.0)
 
     loss_cross_entropy_weight = loss_crossentropy * weight
 
@@ -345,6 +343,8 @@ def trainer_full():
         metrics_train,
         metrics_eval,
         metrics_inverse,
+        transformer,
+        inverse_rl_model,
     ) = init_model_optimizer(config)
 
     env, buffer, buffer_eval, buffer_list, buffer_list_eval, jit_step = init_buffer(

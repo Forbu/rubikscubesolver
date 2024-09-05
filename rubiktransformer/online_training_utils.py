@@ -5,29 +5,33 @@ import flax.nnx as nnx
 import wandb
 
 from rubiktransformer.dataset import GOAL_OBSERVATION
+import jumanji
+
+ENV = jumanji.make("RubiksCube-v0")
+jit_step = jax.jit(ENV.step)
 
 
-def step_fn(state, key, env):
+def step_fn(state, key):
     """
     Simple step function
     We choose a random action
     """
     action = jax.random.randint(
         key=key,
-        minval=env.action_spec.minimum,
-        maxval=env.action_spec.maximum,
+        minval=ENV.action_spec.minimum,
+        maxval=ENV.action_spec.maximum,
         shape=(3,),
     )
 
-    new_state, timestep = env.step(state, action)
+    new_state, timestep = jit_step(state, action)
     timestep.extras["action"] = action
 
     return new_state, timestep
 
 
-def run_n_steps(state, key, n, env):
+def run_n_steps(state, key, n):
     random_keys = jax.random.split(key, n)
-    state, rollout = jax.lax.scan(lambda s, k: step_fn(s, k, env), state, random_keys)
+    state, rollout = jax.lax.scan(step_fn, state, random_keys)
     return rollout
 
 
@@ -269,6 +273,7 @@ def sampling_model(key, model, sample_eval, nb_step=100, config=None):
         ) * (estimation_proba_future - noise_future)
 
     return noise_future
+
 
 def reshape_diffusion_setup(sample, key=jax.random.PRNGKey(0)):
     sample.experience["state_histo"] = sample.experience["state_histo"].reshape(

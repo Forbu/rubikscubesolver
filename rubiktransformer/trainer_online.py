@@ -118,8 +118,8 @@ def init_model_optimizer(config):
 def init_buffer(config):
     # gather data from the environment
     # init models and optimizers
-    env, buffer = dataset.init_env_buffer(sample_batch_size=config.batch_size)
-    env, buffer_eval = dataset.init_env_buffer(sample_batch_size=config.batch_size)
+    env, buffer = dataset.init_env_buffer(sample_batch_size=config.batch_size, max_length=config.max_length_buffer)
+    env, buffer_eval = dataset.init_env_buffer(sample_batch_size=config.batch_size, max_length=config.max_length_buffer)
 
     nb_games = config.nb_games
     len_seq = config.len_seq

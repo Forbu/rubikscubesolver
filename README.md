@@ -1,5 +1,5 @@
 # rubikscubesolver
-Solviing rubik's cube with transformer world model
+Solving rubik's cube with transformer world model
 
 Experience 1 : 
 

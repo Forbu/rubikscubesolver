@@ -42,7 +42,9 @@ Then we can train a policy model with the loss directly being the sum of reward.
 
 - Forcing the WM to train only for non proba (High scale / temperature) degrade the performance
 
-Overall bad results.
+Overall bad results. The model actually progress toward improving the reward but this is not enough : 
+
+![twm_policy](images/TWM_policygradiant.png)
 
 Conclusion : using a world model gradient doesn't work great.
 

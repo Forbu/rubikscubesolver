@@ -72,3 +72,16 @@ Here is the setup to improve the model output :
 
 ![chekcing](images/update_training.png)
 
+Reward progressing are very promising :
+
+![chekcing](images/DDT.png)
+
+
+First takes : 
+
+- with a better training pipeline (faster, more iteration) we could certainly make the reward model improved
+
+- The model directly goes toward a good solution at the beginning (compare to policy model)
+
+
+
